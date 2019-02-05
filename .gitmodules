@@ -1,0 +1,3 @@
+[submodule "KFlex/vendor/KotlinPoet"]
+	path = KFlex/vendor/KotlinPoet
+	url = https://github.com/square/kotlinpoet
