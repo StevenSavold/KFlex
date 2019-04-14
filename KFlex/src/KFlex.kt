@@ -1,7 +1,12 @@
 import java.io.File
 
+enum class State {
+    LexBuilder,
+    LambdaBuilder
+}
+
 enum class TokenType(val value: Int)
-data class TokenDefinition(val type: Pair<String, Int>, val rule: Regex)
+data class TokenDefinition(val type: Pair<String, Int>, val rule: Regex, val block: MutableList<String> = mutableListOf())
 data class Token(val matchedText: String, val tokenType: TokenType, val lineNumber: Int, val wordIndex: Int)
 
 fun main(args: Array<String>)
@@ -65,21 +70,56 @@ fun parseFile(lexFile: File) : MutableList<TokenDefinition>?
     if (!lexFile.exists())
         return null
 
+    val lines: MutableList<String> = mutableListOf()
     val tokenDefinitions: MutableList<TokenDefinition> = mutableListOf()
 
-    var i = 0
     lexFile.forEachLine {
-        //println(it)
-        if ((it.isNotBlank()) && (it.first() != '#'))
+        if (it.isNotBlank() && it.first() != '#')
+            lines.add(it)
+    }
+
+    var state = State.LexBuilder
+    var idx = -1
+
+    for (i in 0 until lines.size)
+    {
+        if (lines[i][0] == '%')
         {
-            // Split the input line into sections based on whitespace
-            val sections = it.split("""\s""".toRegex()).toMutableList()
+            state = if (lines[i][1] == '{')
+            {
+                // If you are entering a lambda switch states and move to the next line
+                State.LambdaBuilder
+            }
+            else if (lines[i][1] == '}')
+            {
+                // If you are exiting a lambda switch back to lex mode and move to the next line
+                State.LexBuilder
+            }
+            else
+            {
+                // Otherwise this line is invalid and you can halt parsing
+                println("ERROR: Invalid line '${lines[i]}'")
+                return null
+            }
+        }
+        else {
+            when (state) {
+                State.LexBuilder -> {
+                    // Split the input line into sections based on whitespace
+                    val sections = lines[i].split("""\s""".toRegex()).toMutableList()
 
-            // Remove the empty sections to leave only the Name of the Token and the Regex that defines it
-            sections.removeIf { section -> section.isEmpty() }
+                    // Remove the empty sections to leave only the Name of the Token and the Regex that defines it
+                    sections.removeIf { section -> section.isEmpty() }
 
-            // Add the Token definition to the list
-            tokenDefinitions.add(TokenDefinition(Pair(sections[0], i++), Regex(sections[1])))
+                    // Add the Token definition to the list
+                    tokenDefinitions.add(TokenDefinition(Pair(sections[0], ++idx), Regex(sections[1])))
+                }
+                State.LambdaBuilder -> {
+                    // add the lines to the last defined tokenDefinition
+                    tokenDefinitions[idx].block.add(lines[i])
+                    println("LINE:: ${lines[i]}")
+                }
+            }
         }
     }
 

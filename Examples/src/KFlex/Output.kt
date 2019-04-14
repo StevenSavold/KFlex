@@ -24,6 +24,26 @@ enum class TokenType(value: Int) {
     id(5)
 }
 
+private val tokenInitBlocks: Array<((Token) -> Unit)?> = arrayOf(
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+            /*
+             * This will be the token that comes into the lambda,
+             * optionally you could omit this lime and use 'it'
+             * just as in a regular kotlin lambda.
+             */
+            tokenInst: Token ->
+            println("A token of type '${tokenInst.tokenType}' was created from the string")
+            println("\"${tokenInst.matchedText}\"")
+            println(tokenInst)
+            println()
+        }
+        )
+
 private val tokenDefinitions: Array<TokenDefinition> =
         arrayOf(TokenDefinition(TokenType.values()[0], Regex(".*")),
         TokenDefinition(TokenType.values()[1], Regex("[0-9]+")),
@@ -54,7 +74,11 @@ data class Token(
     val tokenType: TokenType,
     val lineNumber: Int,
     val wordIndex: Int
-)
+) {
+    init {
+        tokenInitBlocks[tokenType.ordinal]?.invoke(this)
+    }
+}
 
 class Lexer(inputFilepath: String) {
     private val lines: MutableList<String> = mutableListOf()

@@ -34,13 +34,39 @@ fun createFileFromTemplate(definitions: MutableList<TokenDefinition>, outputFile
 
 
     /* Feature Coming Soon! */
-    /*
-    val tokenInitBlockPropertyBuilder = PropertySpec.builder(
-        "tokenInitBlocks",
-        ClassName("kotlin", "Array").parameterizedBy(tokenFnTypeAlias.type.copy(nullable = true)),
-        KModifier.PRIVATE
-    )
-    */
+    val tokenInitBlockPropertyCodeBuilder = CodeBlock.builder()
+        .add("arrayOf(\n")
+
+    /* Generate array contents here */
+    definitions.forEachIndexed { idx: Int, def: TokenDefinition ->
+        if (def.block.isEmpty())
+        {
+            tokenInitBlockPropertyCodeBuilder.add("null,\n")
+        }
+        else
+        {
+            tokenInitBlockPropertyCodeBuilder.add("{\n")
+            def.block.forEach {
+                tokenInitBlockPropertyCodeBuilder.add("%L\n", it)
+            }
+            tokenInitBlockPropertyCodeBuilder.add("}")
+            // add a comma + newline on all lines except the last one
+            if (idx != definitions.size - 1)
+                tokenInitBlockPropertyCodeBuilder.add(",")
+            tokenInitBlockPropertyCodeBuilder.add("\n")
+        }
+    }
+
+    tokenInitBlockPropertyCodeBuilder.add(")")
+    val tokenInitBlockPropertyCode = tokenInitBlockPropertyCodeBuilder.build()
+
+    val tokenInitBlockProperty = PropertySpec.builder(
+            "tokenInitBlocks",
+            ClassName("kotlin", "Array").parameterizedBy(tokenFnTypeAlias.type.copy(nullable = true)),
+            KModifier.PRIVATE
+        )
+        .initializer(tokenInitBlockPropertyCode)
+        .build()
 
 
     val tokenDefInitCodeBuilder = CodeBlock.builder()
@@ -120,7 +146,7 @@ fun createFileFromTemplate(definitions: MutableList<TokenDefinition>, outputFile
             .initializer("wordIndex")
             .build()
         )
-        /* .addInitializerBlock(CodeBlock.of("tokenInitBlocks[tokenType.value]?.invoke(this)\n") */ /* Feature coming soon... */
+        .addInitializerBlock(CodeBlock.of("tokenInitBlocks[tokenType.ordinal]?.invoke(this)\n"))/* Feature coming soon... */
         .addKdoc("Token class will have the following:\n")
         .addKdoc("    matchedText: String     - the string of text it matched with\n")
         .addKdoc("    tokenType:   TokenType  - the type of token it was evaluated to be\n")
@@ -188,7 +214,7 @@ fun createFileFromTemplate(definitions: MutableList<TokenDefinition>, outputFile
         .addImport("java.io", "File")
         .addTypeAlias(tokenFnTypeAlias)
         .addType(tokenTypeEnum)
-        /* .addProperty(tokenInitBlockProperty) */ // Coming soon!
+        .addProperty(tokenInitBlockProperty) // Coming soon!
         .addProperty(tokenDefinitionsProperty)
         .addType(tokenDefinitionDataClass)
         .addType(tokenDataClass)
