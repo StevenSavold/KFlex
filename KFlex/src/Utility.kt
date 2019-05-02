@@ -158,7 +158,7 @@ fun createFileFromTemplate(definitions: MutableList<TokenDefinition>, outputFile
         .build()
 
 
-    val tokenizeClassFunc = FunSpec.builder("tokenize")
+    val lexAllClassFunc = FunSpec.builder("lexAll")
         .returns(ClassName("kotlin.collections", "MutableList").parameterizedBy(Token::class.asClassName()))
         .addCode("""
             |val output = mutableListOf<Token>()
@@ -187,6 +187,33 @@ fun createFileFromTemplate(definitions: MutableList<TokenDefinition>, outputFile
         )
         .build()
 
+    val lexSomeClassFunc = FunSpec.builder("lexSome")
+        .addModifiers(KModifier.SUSPEND)
+        .addCode("""
+            |return sequence {
+            |    for (i in 0 until lines.size) {
+            |        val chunks = lines[i].split(""${'"'}\s""${'"'}.toRegex()).toMutableList()
+            |        chunks.removeIf { chunk -> chunk.isEmpty() }
+            |
+            |        var tokenType: TokenType?
+            |        for (j in 0 until chunks.size) {
+            |            tokenType = null
+            |            for (k in 0 until tokenDefinitions.size) {
+            |                if (tokenDefinitions[k].rule.matches(chunks[j]))
+            |                    tokenType = tokenDefinitions[k].type
+            |            }
+            |
+            |            if (tokenType != null)
+            |                yield(Token(chunks[j], tokenType, i, j))
+            |            else {
+            |                /* No valid token was found! (Did the user not supply an error type??) */
+            |            }
+            |        }
+            |   }
+            |}
+            |""".trimMargin()
+        ).build()
+
 
     val lexerClass = TypeSpec.classBuilder("Lexer")
         .primaryConstructor(FunSpec.constructorBuilder()
@@ -207,7 +234,8 @@ fun createFileFromTemplate(definitions: MutableList<TokenDefinition>, outputFile
             |    file.forEachLine { lines.add(it) }
             |""".trimMargin())
         )
-        .addFunction(tokenizeClassFunc)
+        .addFunction(lexAllClassFunc)
+        .addFunction(lexSomeClassFunc)
         .build()
 
     return FileSpec.builder("KFlex", outputFileName ?: "Output")

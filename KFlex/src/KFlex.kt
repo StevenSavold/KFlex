@@ -117,7 +117,7 @@ fun parseFile(lexFile: File) : MutableList<TokenDefinition>?
                 State.LambdaBuilder -> {
                     // add the lines to the last defined tokenDefinition
                     tokenDefinitions[idx].block.add(lines[i])
-                    println("LINE:: ${lines[i]}")
+                    //println("LINE:: ${lines[i]}")
                 }
             }
         }

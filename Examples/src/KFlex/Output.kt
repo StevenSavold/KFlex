@@ -89,7 +89,7 @@ class Lexer(inputFilepath: String) {
             file.forEachLine { lines.add(it) }
     }
 
-    fun tokenize(): MutableList<Token> {
+    fun lexAll(): MutableList<Token> {
         val output = mutableListOf<Token>()
         lines.forEachIndexed { lineNumber: Int, line: String ->
             val chunks = line.split("""\s""".toRegex()).toMutableList()
@@ -112,5 +112,27 @@ class Lexer(inputFilepath: String) {
         }
 
         return output
+    }
+
+    suspend fun lexSome() = sequence {
+        for (i in 0 until lines.size) {
+            val chunks = lines[i].split("""\s""".toRegex()).toMutableList()
+            chunks.removeIf { chunk -> chunk.isEmpty() }
+
+            var tokenType: TokenType?
+            for (j in 0 until chunks.size) {
+                tokenType = null
+                for (k in 0 until tokenDefinitions.size) {
+                    if (tokenDefinitions[k].rule.matches(chunks[j]))
+                        tokenType = tokenDefinitions[k].type
+                }
+
+                if (tokenType != null)
+                    yield(Token(chunks[j], tokenType, i, j))
+                else {
+                    /* No valid token was found! (Did the user not supply an error type??) */
+                }
+            }
+       }
     }
 }

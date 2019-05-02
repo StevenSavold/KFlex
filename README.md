@@ -124,7 +124,17 @@ analyse. You can then call the member function ```tokenize()``` which takes no i
 whole file and returns a ```MutableList<Token>``` to the caller. *That's it! It's that easy!*
 
     val lexer = Lexer("myInputFile.txt")
-    val tokens = lexer.tokenize()
+    val tokens = lexer.lexAll()
     
-*Note: In future versions of KFlex, there are plans to support the asynchronous lexing of tokens using 
-Kotlin's Coroutines.*
+You can also use the lexer in a suspending manner using the ```lexSome()``` function.
+Using kotlin Sequences you can grab the first *N* tokens from the file to use however you like.
+
+    val lexer = Lexer("myInputFile.txt")
+    runBlocking {
+        val tokens = lexer.lexSome().take(10).toList()
+        tokens.forEach {
+            println(it)
+        }
+    }
+    
+*NOTE: ```lexSome()``` is still under experimentation and is liable to change in the future*
